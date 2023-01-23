@@ -27,7 +27,7 @@ func (base calculatorService) Hello(name string) error {
 	}
 
 	fmt.Printf("Service : Hello\n")
-	fmt.Printf("Request : %v", req.Name)
-	fmt.Printf("Response ; %v", res.Result)
+	fmt.Printf("Request : %v\n", req.Name)
+	fmt.Printf("Response : %v\n", res.Result)
 	return nil
 }
