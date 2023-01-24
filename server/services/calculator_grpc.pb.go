@@ -25,6 +25,7 @@ type CalculatorClient interface {
 	Hello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloResponse, error)
 	Fibonacci(ctx context.Context, in *FibonacciRequest, opts ...grpc.CallOption) (Calculator_FibonacciClient, error)
 	Average(ctx context.Context, opts ...grpc.CallOption) (Calculator_AverageClient, error)
+	Sum(ctx context.Context, opts ...grpc.CallOption) (Calculator_SumClient, error)
 }
 
 type calculatorClient struct {
@@ -110,6 +111,37 @@ func (x *calculatorAverageClient) CloseAndRecv() (*AverageResponse, error) {
 	return m, nil
 }
 
+func (c *calculatorClient) Sum(ctx context.Context, opts ...grpc.CallOption) (Calculator_SumClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Calculator_ServiceDesc.Streams[2], "/services.Calculator/Sum", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &calculatorSumClient{stream}
+	return x, nil
+}
+
+type Calculator_SumClient interface {
+	Send(*SumRequest) error
+	Recv() (*SumResponse, error)
+	grpc.ClientStream
+}
+
+type calculatorSumClient struct {
+	grpc.ClientStream
+}
+
+func (x *calculatorSumClient) Send(m *SumRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *calculatorSumClient) Recv() (*SumResponse, error) {
+	m := new(SumResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // CalculatorServer is the server API for Calculator service.
 // All implementations must embed UnimplementedCalculatorServer
 // for forward compatibility
@@ -117,6 +149,7 @@ type CalculatorServer interface {
 	Hello(context.Context, *HelloRequest) (*HelloResponse, error)
 	Fibonacci(*FibonacciRequest, Calculator_FibonacciServer) error
 	Average(Calculator_AverageServer) error
+	Sum(Calculator_SumServer) error
 	mustEmbedUnimplementedCalculatorServer()
 }
 
@@ -132,6 +165,9 @@ func (UnimplementedCalculatorServer) Fibonacci(*FibonacciRequest, Calculator_Fib
 }
 func (UnimplementedCalculatorServer) Average(Calculator_AverageServer) error {
 	return status.Errorf(codes.Unimplemented, "method Average not implemented")
+}
+func (UnimplementedCalculatorServer) Sum(Calculator_SumServer) error {
+	return status.Errorf(codes.Unimplemented, "method Sum not implemented")
 }
 func (UnimplementedCalculatorServer) mustEmbedUnimplementedCalculatorServer() {}
 
@@ -211,6 +247,32 @@ func (x *calculatorAverageServer) Recv() (*AverageRequest, error) {
 	return m, nil
 }
 
+func _Calculator_Sum_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(CalculatorServer).Sum(&calculatorSumServer{stream})
+}
+
+type Calculator_SumServer interface {
+	Send(*SumResponse) error
+	Recv() (*SumRequest, error)
+	grpc.ServerStream
+}
+
+type calculatorSumServer struct {
+	grpc.ServerStream
+}
+
+func (x *calculatorSumServer) Send(m *SumResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *calculatorSumServer) Recv() (*SumRequest, error) {
+	m := new(SumRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Calculator_ServiceDesc is the grpc.ServiceDesc for Calculator service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -232,6 +294,12 @@ var Calculator_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Average",
 			Handler:       _Calculator_Average_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "Sum",
+			Handler:       _Calculator_Sum_Handler,
+			ServerStreams: true,
 			ClientStreams: true,
 		},
 	},
